@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createCommit } from '../utils/github';
 import './VersionBadge.css';
 
 interface VersionBadgeProps {
@@ -8,6 +9,7 @@ interface VersionBadgeProps {
 const VersionBadge: React.FC<VersionBadgeProps> = ({ version }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [changelog, setChangelog] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetch('/CHANGELOG.md')
@@ -17,7 +19,10 @@ const VersionBadge: React.FC<VersionBadgeProps> = ({ version }) => {
   }, []);
 
   const handleVersionUpdate = async (type: 'patch' | 'minor' | 'major') => {
+    if (isUpdating) return;
+
     try {
+      setIsUpdating(true);
       let commitMessage = '';
       switch (type) {
         case 'patch':
@@ -31,26 +36,13 @@ const VersionBadge: React.FC<VersionBadgeProps> = ({ version }) => {
           break;
       }
 
-      const response = await fetch('/api/version-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type,
-          message: commitMessage
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Version update failed');
-      }
-
-      // Reload the page to reflect changes
-      window.location.reload();
+      await createCommit(type, commitMessage);
+      alert(`${type} version update initiated. Changes will be reflected shortly.`);
     } catch (error) {
       console.error('Error updating version:', error);
-      alert('Failed to update version. Please try again.');
+      alert('Failed to update version. Please check console for details.');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -58,23 +50,26 @@ const VersionBadge: React.FC<VersionBadgeProps> = ({ version }) => {
     <>
       <div className="version-controls">
         <button 
-          className="version-button patch" 
+          className={`version-button patch ${isUpdating ? 'disabled' : ''}`}
           onClick={() => handleVersionUpdate('patch')}
           title="Patch Version (0.0.x)"
+          disabled={isUpdating}
         >
           Patch
         </button>
         <button 
-          className="version-button minor" 
+          className={`version-button minor ${isUpdating ? 'disabled' : ''}`}
           onClick={() => handleVersionUpdate('minor')}
           title="Minor Version (0.x.0)"
+          disabled={isUpdating}
         >
           Minor
         </button>
         <button 
-          className="version-button major" 
+          className={`version-button major ${isUpdating ? 'disabled' : ''}`}
           onClick={() => handleVersionUpdate('major')}
           title="Major Version (x.0.0)"
+          disabled={isUpdating}
         >
           Major
         </button>

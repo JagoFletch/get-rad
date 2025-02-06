@@ -3,8 +3,8 @@ name: Build, Version and Deploy
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  repository_dispatch:
+    types: [version_patch, version_minor, version_major]
 
 jobs:
   build-and-deploy:
@@ -32,7 +32,8 @@ jobs:
 
       - name: Create Release
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            git commit --allow-empty -m "${{ github.event.client_payload.message }}"
             npm run release
             git push --follow-tags origin main
           fi
@@ -42,6 +43,6 @@ jobs:
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'repository_dispatch'
         with:
           folder: build
