@@ -13,17 +13,20 @@ export async function createCommit(type: 'patch' | 'minor' | 'major', message: s
       'Accept': 'application/vnd.github.v3+json',
       'Authorization': `Bearer ${GITHUB_TOKEN}`,
       'Content-Type': 'application/json',
+      'X-GitHub-Api-Version': '2022-11-28'
     },
     body: JSON.stringify({
       event_type: `version_${type}`,
       client_payload: {
+        type: type,
         message: message
       }
     })
   });
 
   if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.statusText}`);
+    const errorData = await response.json();
+    throw new Error(`GitHub API error:\n${JSON.stringify(errorData, null, 2)}`);
   }
 
   return response;
